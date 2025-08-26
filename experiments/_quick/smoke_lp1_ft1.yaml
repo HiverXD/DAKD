@@ -1,0 +1,15 @@
+# experiments/_quick/smoke_lp1_ft1.yaml
+experiment: { name: "02_soft_kd" }
+
+kd:
+  enable: true
+  cache_logits: false     # 캐시 생략 → 한 에폭만 확인할 때 더 빠름
+  alpha: 0.7
+  temperature: 3.0
+
+train:
+  linear_probe: { enable: true,  epochs: 1 }
+  finetune:     { enable: true,  epochs: 1 }
+
+logging:
+  log_interval: 50

@@ -1,0 +1,84 @@
+project: RDKD
+seed: 3407
+device: "cuda"
+precision: "fp32"
+
+experiment:
+#  name: "01_baseline_test"
+#  name: "02_soft_kd"
+  name: "03_relational_kd"
+
+output:
+  dir: "runs"           # train.py가 runs/<experiment.name>/<dataset>로 조합
+
+paths:
+  ckpt_root: "src/model/ckpts"
+
+data:
+  root: "dataset"
+  dataset: "cifar10"    # override에서 바뀜
+  batch_size: 128
+  num_workers: 4
+  pin_memory: true
+  download: true
+
+model:
+  backbone: "resnet18"       # student용 별칭(실제 ckpt는 아래 student.ckpt 사용)
+  num_classes: 10            # override에서 바뀜
+  teacher:
+    arch: "resnet34"
+    ckpt: "src/model/ckpts/ResNet34.pt"
+    arch: "resnet34"
+    # 템플릿 경로: 없으면 teachers.json에서 찾고, 없으면 마지막 fallback으로 사용
+    template_backbone: "src/model/ckpts/resnet34_{dataset}_backbone.pt"
+    template_classifier: "src/model/ckpts/resnet34_{dataset}_classifier.pt"
+  student:
+    arch: "resnet18"
+    ckpt: "src/model/ckpts/ResNet18.pt"
+
+train:
+  linear_probe: { enable: true,  epochs: 20 }
+  finetune:     { enable: true,  epochs: 80 }
+  reuse_linear_head: true
+  teacher:
+    linear_probe: { enable: true, epochs: 20 }
+    finetune:     { enable: true,  epochs: 80 }
+    reuse_linear_head: true
+  optimizer:
+    name: "AdamW"
+    lr: 3.0e-4
+    weight_decay: 0.05
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+  scheduler:
+    name: "cosine"
+    warmup_epochs: 5
+    min_lr: 1.0e-6
+
+logging:
+  log_interval: 50
+
+eval:
+  metrics: ["acc", "recall", "f1", "top5"]
+
+kd:
+  enable: false
+  alpha: 0.7
+  temperature: 3.0
+  cache_logits: true         # 02에서 기본 on
+  cache_template: "src/model/ckpts/soft_targets/{dataset}_fp16.pt"  # 자동 생성 경로
+
+rkd:
+  enable: true
+  feat_dim: 512
+  embed_template: "src/model/ckpts/final_embeddings/{dataset}_fp16.pt"
+  beta_schedule:
+    start_epoch: 21
+    end_epoch: 30
+    base: 50
+    stepwise: true
+
+rdkd:
+  dynamic_beta: 0.0
+  relational_gamma: 0.0
+  proj: { type: "gaussian", k: 64, heads: 1, seed: 42 }

@@ -1,0 +1,6 @@
+{
+  "monitor": "val_acc",
+  "val_best": 0.3659,
+  "test_acc": 0.3659,
+  "test_loss": 2.841669507598877
+}

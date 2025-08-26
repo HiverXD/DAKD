@@ -1,0 +1,4 @@
+data:
+  dataset: "stl10"
+model:
+  num_classes: 10

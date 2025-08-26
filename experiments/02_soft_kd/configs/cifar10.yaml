@@ -1,0 +1,6 @@
+data:
+  dataset: "cifar10"
+model:
+  num_classes: 10
+kd:
+  enable: true

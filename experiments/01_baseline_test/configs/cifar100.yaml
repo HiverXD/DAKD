@@ -1,0 +1,6 @@
+data:
+  dataset: "cifar100"
+model:
+  num_classes: 100
+logging:
+  tags: ["baseline", "cifar100"]

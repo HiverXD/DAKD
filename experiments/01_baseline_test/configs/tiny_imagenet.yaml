@@ -1,0 +1,4 @@
+data:
+  dataset: "tiny_imagenet"
+model:
+  num_classes: 200

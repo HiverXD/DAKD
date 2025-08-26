@@ -1,0 +1,18 @@
+{
+  "cifar10": {
+    "classifier": "src\\model\\ckpts\\resnet34_cifar10_classifier.pt",
+    "backbone": "src\\model\\ckpts\\resnet34_cifar10_backbone.pt"
+  },
+  "cifar100": {
+    "classifier": "src\\model\\ckpts\\resnet34_cifar100_classifier.pt",
+    "backbone": "src\\model\\ckpts\\resnet34_cifar100_backbone.pt"
+  },
+  "stl10": {
+    "classifier": "src\\model\\ckpts\\resnet34_stl10_classifier.pt",
+    "backbone": "src\\model\\ckpts\\resnet34_stl10_backbone.pt"
+  },
+  "tiny_imagenet": {
+    "classifier": "src\\model\\ckpts\\resnet34_tiny_imagenet_classifier.pt",
+    "backbone": "src\\model\\ckpts\\resnet34_tiny_imagenet_backbone.pt"
+  }
+}

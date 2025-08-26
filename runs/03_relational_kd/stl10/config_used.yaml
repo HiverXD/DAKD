@@ -1,0 +1,92 @@
+project: RDKD
+seed: 3407
+device: cuda
+precision: fp32
+experiment:
+  name: 03_relational_kd
+output:
+  dir: runs
+paths:
+  ckpt_root: src/model/ckpts
+data:
+  root: dataset
+  dataset: stl10
+  batch_size: 128
+  num_workers: 4
+  pin_memory: true
+  download: true
+model:
+  backbone: resnet18
+  num_classes: 10
+  teacher:
+    arch: resnet34
+    ckpt: src/model/ckpts/ResNet34.pt
+    template_backbone: src/model/ckpts/resnet34_{dataset}_backbone.pt
+    template_classifier: src/model/ckpts/resnet34_{dataset}_classifier.pt
+    backbone_path: src/model/ckpts/resnet34_stl10_backbone.pt
+    classifier_path: src/model/ckpts/resnet34_stl10_classifier.pt
+  student:
+    arch: resnet18
+    ckpt: src/model/ckpts/ResNet18.pt
+train:
+  linear_probe:
+    enable: true
+    epochs: 20
+  finetune:
+    enable: true
+    epochs: 80
+  reuse_linear_head: true
+  teacher:
+    linear_probe:
+      enable: true
+      epochs: 20
+    finetune:
+      enable: true
+      epochs: 80
+    reuse_linear_head: true
+  optimizer:
+    name: AdamW
+    lr: 0.0003
+    weight_decay: 0.05
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.0e-08
+  scheduler:
+    name: cosine
+    warmup_epochs: 5
+    min_lr: 1.0e-06
+logging:
+  log_interval: 50
+eval:
+  metrics:
+  - acc
+  - recall
+  - f1
+  - top5
+kd:
+  enable: true
+  alpha: 0.7
+  temperature: 3.0
+  cache_logits: true
+  cache_template: src/model/ckpts/soft_targets/{dataset}_fp16.pt
+  cache_path: src/model/ckpts/soft_targets/stl10_fp16.pt
+rkd:
+  enable: true
+  feat_dim: 512
+  embed_template: src/model/ckpts/final_embeddings/{dataset}_fp16.pt
+  beta_schedule:
+    start_epoch: 21
+    end_epoch: 30
+    base: 50
+    stepwise: true
+rdkd:
+  dynamic_beta: 0.0
+  relational_gamma: 0.0
+  proj:
+    type: gaussian
+    k: 64
+    heads: 1
+    seed: 42
+_runtime:
+  runstamp: '20250821_165700'

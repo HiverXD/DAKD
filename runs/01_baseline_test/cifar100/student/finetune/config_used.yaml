@@ -1,0 +1,77 @@
+project: RDKD
+seed: 3407
+device: cuda
+precision: fp32
+experiment:
+  name: 01_baseline_test
+output:
+  dir: runs
+paths:
+  ckpt_root: src/model/ckpts
+data:
+  root: dataset
+  dataset: cifar100
+  batch_size: 128
+  num_workers: 4
+  pin_memory: true
+  download: true
+model:
+  backbone: resnet18
+  num_classes: 100
+  teacher:
+    arch: resnet34
+    ckpt: src/model/ckpts/ResNet34.pt
+    template_backbone: src/model/ckpts/resnet34_{dataset}_backbone.pt
+    template_classifier: src/model/ckpts/resnet34_{dataset}_classifier.pt
+  student:
+    arch: resnet18
+    ckpt: src/model/ckpts/ResNet18.pt
+train:
+  linear_probe:
+    enable: true
+    epochs: 20
+  finetune:
+    enable: true
+    epochs: 80
+  reuse_linear_head: true
+  teacher:
+    linear_probe:
+      enable: true
+      epochs: 20
+    finetune:
+      enable: true
+      epochs: 80
+    reuse_linear_head: true
+  optimizer:
+    name: AdamW
+    lr: 0.0003
+    weight_decay: 0.05
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.0e-08
+  scheduler:
+    name: cosine
+    warmup_epochs: 5
+    min_lr: 1.0e-06
+logging:
+  log_interval: 50
+  tags:
+  - baseline
+  - cifar100
+eval:
+  metrics:
+  - acc
+  - recall
+  - f1
+  - top5
+kd:
+  enable: false
+rdkd:
+  dynamic_beta: 0.0
+  relational_gamma: 0.0
+  proj:
+    type: gaussian
+    k: 64
+    heads: 1
+    seed: 42
