@@ -1,6 +1,0 @@
-data:
-  dataset: "tiny_imagenet"
-model:
-  num_classes: 200
-kd:
-  enable: true

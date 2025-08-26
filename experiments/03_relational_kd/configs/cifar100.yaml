@@ -1,6 +1,0 @@
-data:
-  dataset: "cifar100"
-model:
-  num_classes: 100
-kd:
-  enable: true
