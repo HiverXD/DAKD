@@ -154,12 +154,52 @@ def _step_kd(kd_loss_fn: SoftTargetKDLoss, student_logits, teacher_logits, targe
     # parts: {"train_loss_ce", "train_loss_kd", "train_loss"}
     return total, float(parts["train_loss_ce"]), float(parts["train_loss_kd"])
 
+def build_kd_loss_fn(cfg: dict) -> SoftTargetKDLoss:
+    kd_cfg = cfg.get("kd", {})
+    T = float(kd_cfg.get("temperature", 1.0))
+    gamma = kd_cfg.get("gamma", None)   # 새 방식
+    alpha = kd_cfg.get("alpha", None)   # 구 방식(하위호환)
+    return SoftTargetKDLoss(temperature=T, gamma=gamma, alpha=alpha)
+
+def _derive_val_cache_path(train_path: str) -> str:
+    # 예: foo_fp16.pt -> foo_val_fp16.pt
+    if train_path.endswith(".pt"):
+        base = train_path[:-3]
+        return f"{base}_val.pt" if base.endswith("_fp16") else f"{base}_val_fp16.pt"
+    return train_path + "_val_fp16.pt"
+
+def maybe_build_banks(cfg, teacher, train_loader, val_loader, device):
+    kd_cfg = cfg.get("kd", {})
+    use_cache_train = bool(kd_cfg.get("cache_logits", True))
+    use_cache_val   = bool(kd_cfg.get("cache_val_logits", False))
+
+    train_bank = None
+    val_bank   = None
+
+    if use_cache_train:
+        train_cache_path = kd_cfg["cache_path"]  # 기존 expand에서 채워짐
+        train_bank = TeacherLogitsBank(train_cache_path)
+        if not train_bank.exists():
+            # teacher는 eval/stop-grad 전제
+            train_bank.build(teacher, train_loader, device=device)
+
+    if use_cache_val:
+        # val 경로 파생(설정에 별도 키가 있으면 우선 사용)
+        val_cache_path = kd_cfg.get("cache_path_val", _derive_val_cache_path(kd_cfg["cache_path"]))
+        val_bank = TeacherLogitsBank(val_cache_path)
+        if not val_bank.exists():
+            val_bank.build(teacher, val_loader, device=device)
+
+    return train_bank, val_bank
+
 
 # ----------------------------
 # One epoch train / eval (tqdm + 001 포맷용 통계)
 # ----------------------------
-def train_one_epoch(student, teacher, bank, loader, device, optimizer, kd_loss_fn, log_interval=50):
+def train_one_epoch(student, teacher, bank, loader, device, optimizer, kd_loss_fn,
+                    log_interval=50, require_bank: bool = False):
     student.train()
+    from tqdm.auto import tqdm
     tbar = tqdm(loader, desc="train", leave=False)
     total_loss_sum = ce_sum = kd_sum = correct = seen = 0
 
@@ -167,11 +207,15 @@ def train_one_epoch(student, teacher, bank, loader, device, optimizer, kd_loss_f
         if len(batch) == 3: x, y, idx = batch
         else: x, y, idx = batch[0], batch[1], None
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+        idx = idx.to(device) if idx is not None else None
 
         s_logits = student(x)
+
         if bank is not None and idx is not None:
             t_logits = _teacher_logits_from_bank(bank, idx)
         else:
+            if require_bank:
+                raise RuntimeError("Train logits cache required but not found (bank=None).")
             with torch.no_grad():
                 t_logits = _teacher_logits_from_teacher(teacher, x)
 
@@ -179,6 +223,7 @@ def train_one_epoch(student, teacher, bank, loader, device, optimizer, kd_loss_f
         optimizer.zero_grad(set_to_none=True)
         loss_total.backward()
         optimizer.step()
+        # (나머지 통계 집계/로그는 기존 그대로)
 
         bs = x.size(0)
         seen += bs
@@ -204,21 +249,30 @@ def train_one_epoch(student, teacher, bank, loader, device, optimizer, kd_loss_f
 
 
 @torch.no_grad()
-def eval_one_epoch(student, teacher, loader, device, kd_loss_fn):
+def eval_one_epoch(student, teacher, loader, device, kd_loss_fn,
+                   bank=None, require_bank: bool = False):
     student.eval()
+    from tqdm.auto import tqdm
     tbar = tqdm(loader, desc="val", leave=False)
     total_loss_sum = ce_sum = kd_sum = correct = seen = 0
 
     for batch in tbar:
-        if len(batch) == 3: x, y, _ = batch
-        else: x, y = batch
+        if len(batch) == 3:
+            x, y, idx = batch
+        else:
+            x, y = batch[:2]; idx = None
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
 
         s_logits = student(x)
-        t_logits = _teacher_logits_from_teacher(teacher, x)  # val은 bank 대신 teacher on-the-fly
+
+        if bank is not None and idx is not None:
+            t_logits = _teacher_logits_from_bank(bank, idx)
+        else:
+            if require_bank:
+                raise RuntimeError("Validation logits cache required but not found (bank=None).")
+            t_logits = _teacher_logits_from_teacher(teacher, x)
 
         loss_total, loss_ce, loss_kd = _step_kd(kd_loss_fn, s_logits, t_logits, y)
-
         bs = x.size(0)
         seen += bs
         total_loss_sum += float(loss_total) * bs
@@ -241,6 +295,7 @@ def eval_one_epoch(student, teacher, loader, device, kd_loss_fn):
     }
 
 
+
 # ----------------------------
 # Main
 # ----------------------------
@@ -260,27 +315,27 @@ def main():
     teacher = build_teacher(cfg, device)
     student = build_student(cfg, device)
 
-    # logits cache (train 전용)
-    bank = None
-    if cfg["kd"].get("cache_logits", True):
-        bank = TeacherLogitsBank(
-            cfg["kd"]["cache_path"],
-            num_samples=len(train_loader.dataset),
-            num_classes=int(cfg["model"]["num_classes"]),
-            device=device,
-        )
-        if not bank.exists():
-            cache_loader = DataLoader(
-                train_loader.dataset,
-                batch_size=cfg["data"]["batch_size"],
-                shuffle=False,
-                num_workers=cfg["data"]["num_workers"],
-                pin_memory=cfg["data"].get("pin_memory", True),
-                collate_fn=collate_with_index,
-            )
-            bank.build(teacher, cache_loader)
+    # 캐시 강제 여부 플래그
+    require_train_bank = bool(cfg["kd"].get("cache_logits", True))
+    require_val_bank   = bool(cfg["kd"].get("cache_val_logits", False))
 
-    kd_loss = SoftTargetKDLoss(alpha=float(cfg["kd"]["alpha"]), temperature=float(cfg["kd"]["temperature"]))
+    # 경로에서 bank만 생성(파일이 없으면 예외)
+    train_bank = None
+    val_bank = None
+    if require_train_bank:
+        train_bank = TeacherLogitsBank(cfg["kd"]["cache_path"])
+        if not train_bank.exists():
+            raise FileNotFoundError(f"Train logits cache not found: {cfg['kd']['cache_path']}")
+
+    if require_val_bank:
+        val_cache_path = cfg["kd"].get("cache_path_val",
+                                    _derive_val_cache_path(cfg["kd"]["cache_path"]))
+        val_bank = TeacherLogitsBank(val_cache_path)
+        if not val_bank.exists():
+            raise FileNotFoundError(f"Val logits cache not found: {val_cache_path}")
+
+
+    kd_loss = build_kd_loss_fn(cfg)
     optim, sched = build_optimizer_scheduler(cfg, student)
     log_interval = int(cfg.get("logging", {}).get("log_interval", 50))
 
@@ -296,8 +351,12 @@ def main():
         for e in range(num_epochs):
             global_epoch += 1
             t0 = time.perf_counter()
-            tr = train_one_epoch(student, teacher, bank, train_loader, device, optim, kd_loss, log_interval)
-            va = eval_one_epoch(student, teacher, val_loader, device, kd_loss)
+            tr = train_one_epoch(student, teacher, train_bank, train_loader, device,
+                                optim, kd_loss, log_interval,
+                                require_bank=require_train_bank)
+            va = eval_one_epoch(student, teacher, val_loader, device, kd_loss,
+                                bank=val_bank, require_bank=require_val_bank)
+
             if sched is not None: sched.step()
             time_sec = time.perf_counter() - t0
             lr = float(optim.param_groups[0]["lr"])
@@ -335,8 +394,11 @@ def main():
         for e in range(num_epochs):
             global_epoch += 1
             t0 = time.perf_counter()
-            tr = train_one_epoch(student, teacher, bank, train_loader, device, optim, kd_loss, log_interval)
-            va = eval_one_epoch(student, teacher, val_loader, device, kd_loss)
+            tr = train_one_epoch(student, teacher, train_bank, train_loader, device,
+                                optim, kd_loss, log_interval,
+                                require_bank=require_train_bank)
+            va = eval_one_epoch(student, teacher, val_loader, device, kd_loss,
+                                bank=val_bank, require_bank=require_val_bank)
             if sched is not None: sched.step()
             time_sec = time.perf_counter() - t0
             lr = float(optim.param_groups[0]["lr"])

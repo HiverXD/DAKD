@@ -55,12 +55,14 @@ def expand_softkd_templates(cfg: dict) -> dict:
 
     # 3) logits cache
     kd = cfg.setdefault("kd", {})
-    if kd.get("cache_logits", True):
-        cache_tmpl = cfg.get("kd", {}).get("cache_template",
-                     cfg.get("paths", {}).get("template_cache",
-                         os.path.join(ckpt_root, "soft_targets/{dataset}_fp16.pt")))
-        kd.setdefault("cache_path", cache_tmpl.format(dataset=ds))
-
+    path = kd.get("cache_path", None)
+    if path is not None and "cache_path_val" not in kd:
+        # train 경로에서 val 경로 파생
+        if path.endswith(".pt"):
+            base = path[:-3]
+            kd["cache_path_val"] = f"{base}_val.pt" if base.endswith("_fp16") else f"{base}_val_fp16.pt"
+        else:
+            kd["cache_path_val"] = path + "_val_fp16.pt"
     return cfg
 
 def load_config(root_cfg_path: str | Path, override_paths: list[str | Path] | None = None) -> dict:
