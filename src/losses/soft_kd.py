@@ -9,8 +9,8 @@ class SoftTargetKDLoss(nn.Module):
     - 로그용 키: train_loss, train_loss_ce, train_loss_kd
     """
     def __init__(self, temperature: float = 1.0,
-                 gamma: float | None = None,
-                 alpha: float | None = None,    # backward-compat
+                 gamma= None,
+                 alpha = None,
                  reduction: str = "mean"):
         super().__init__()
         self.temperature = float(temperature)

@@ -13,6 +13,10 @@ output:
 paths:
   ckpt_root: "src/model/ckpts"
 
+dataset_lst: 
+  ds_keys: [cifar10, cifar100, stl10, tiny_imagenet]
+  ds_num_classes: [10, 100, 10, 200]
+
 data:
   root: "dataset"
   dataset: "cifar10"    # override에서 바뀜
@@ -29,8 +33,8 @@ model:
     ckpt: "src/model/ckpts/ResNet34.pt"
     arch: "resnet34"
     # 템플릿 경로: 없으면 teachers.json에서 찾고, 없으면 마지막 fallback으로 사용
-    template_backbone: "src/model/ckpts/resnet34_{dataset}_backbone.pt"
-    template_classifier: "src/model/ckpts/resnet34_{dataset}_classifier.pt"
+    backbone_path: "src/model/ckpts/resnet34_{dataset}_backbone.pt"
+    classifier_path: "src/model/ckpts/resnet34_{dataset}_classifier.pt"
   student:
     arch: "resnet18"
     ckpt: "src/model/ckpts/ResNet18.pt"
@@ -67,6 +71,4 @@ kd:
   temperature: 3.0
   cache_logits: true         # train split에서 bank cache 사용
   cache_val_logits: true     # valid split도 bank 캐시 사용
-  cache_template: "src/model/ckpts/soft_targets/{dataset}_fp16.pt"  # 자동 생성 경로
-
-
+  cache_path: "src/model/ckpts/soft_targets/{dataset}_fp16.pt"  # 자동 생성 경로
