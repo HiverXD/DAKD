@@ -6,6 +6,8 @@ from src.model.load_teacher import load_backbone_and_classifier
 from src.data.soft_targets import TeacherLogitsBank
 from src.train_soft_kd import _derive_val_cache_path
 
+from tqdm import tqdm
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -22,7 +24,7 @@ def main():
 
     # dataloaders (shuffle=False, WithIndex)
     train_loaders, valid_loaders = loaders()  # 기존 함수
-    for i, ds_key in enumerate(ds_keys):
+    for i, ds_key in enumerate(tqdm(ds_keys)):
         tr = train_loaders[ds_key]
         va = valid_loaders[ds_key]
         # WithIndex 래핑
@@ -41,8 +43,8 @@ def main():
         # teacher
         tch_cfg = cfg["model"]["teacher"]
 
-        bpt = tch_cfg["backbone_path"]
-        cpt = tch_cfg["classifier_path"]
+        bpt = tch_cfg["template_backbone"]
+        cpt = tch_cfg["template_classifier"]
         bp = bpt.format(dataset=ds_key)
         cp = cpt.format(dataset=ds_key)
 

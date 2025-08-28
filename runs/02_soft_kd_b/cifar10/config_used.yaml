@@ -83,4 +83,4 @@ kd:
   cache_path: src/model/ckpts/soft_targets/{dataset}_fp16.pt
   cache_path_val: src/model/ckpts/soft_targets/{dataset}_fp16_val.pt
 _runtime:
-  runstamp: '20250828_232645'
+  runstamp: '20250828_231812'

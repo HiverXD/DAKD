@@ -33,8 +33,8 @@ model:
     ckpt: "src/model/ckpts/ResNet34.pt"
     arch: "resnet34"
     # 템플릿 경로: 없으면 teachers.json에서 찾고, 없으면 마지막 fallback으로 사용
-    backbone_path: "src/model/ckpts/resnet34_{dataset}_backbone.pt"
-    classifier_path: "src/model/ckpts/resnet34_{dataset}_classifier.pt"
+    template_backbone: "src/model/ckpts/resnet34_{dataset}_backbone.pt"
+    template_classifier: "src/model/ckpts/resnet34_{dataset}_classifier.pt"
   student:
     arch: "resnet18"
     ckpt: "src/model/ckpts/ResNet18.pt"
