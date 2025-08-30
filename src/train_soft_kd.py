@@ -322,15 +322,20 @@ def main():
     # 경로에서 bank만 생성(파일이 없으면 예외)
     train_bank = None
     val_bank = None
+
+    tr_num_samples = len(train_loader.dataset)
+    va_num_samples = len(val_loader.dataset)
+    num_classes=cfg["model"]["num_classes"]
+
     if require_train_bank:
-        train_bank = TeacherLogitsBank(cfg["kd"]["cache_path"])
+        train_bank = TeacherLogitsBank(cfg["kd"]["cache_path"], tr_num_samples, num_classes)
         if not train_bank.exists():
             raise FileNotFoundError(f"Train logits cache not found: {cfg['kd']['cache_path']}")
 
     if require_val_bank:
         val_cache_path = cfg["kd"].get("cache_path_val",
                                     _derive_val_cache_path(cfg["kd"]["cache_path"]))
-        val_bank = TeacherLogitsBank(val_cache_path)
+        val_bank = TeacherLogitsBank(val_cache_path, va_num_samples, num_classes)
         if not val_bank.exists():
             raise FileNotFoundError(f"Val logits cache not found: {val_cache_path}")
 

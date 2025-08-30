@@ -25,8 +25,6 @@ def expand_softkd_templates(cfg: dict) -> dict:
     """
     dataset만으로 teacher ckpt / cache 경로 자동 확장 (model.* 트리 일관 유지)
     """
-    if not cfg.get("kd", {}).get("enable", False):
-        return cfg
 
     ds = cfg["data"]["dataset"]
     ckpt_root = cfg.get("paths", {}).get("ckpt_root", "src/model/ckpts")
@@ -55,7 +53,9 @@ def expand_softkd_templates(cfg: dict) -> dict:
 
     # 3) logits cache
     kd = cfg.setdefault("kd", {})
-    path = kd.get("cache_path", None)
+    template = kd.get("cache_path_template", None)
+    path = template.format(dataset=ds)
+    kd["cache_path"] = path
     if path is not None and "cache_path_val" not in kd:
         # train 경로에서 val 경로 파생
         if path.endswith(".pt"):

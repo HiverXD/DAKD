@@ -21,7 +21,7 @@ dataset_lst:
   - 200
 data:
   root: dataset
-  dataset: cifar10
+  dataset: stl10
   batch_size: 128
   num_workers: 4
   pin_memory: true
@@ -34,8 +34,8 @@ model:
     ckpt: src/model/ckpts/ResNet34.pt
     template_backbone: src/model/ckpts/resnet34_{dataset}_backbone.pt
     template_classifier: src/model/ckpts/resnet34_{dataset}_classifier.pt
-    backbone_path: src/model/ckpts/resnet34_cifar10_backbone.pt
-    classifier_path: src/model/ckpts/resnet34_cifar10_classifier.pt
+    backbone_path: src/model/ckpts/resnet34_stl10_backbone.pt
+    classifier_path: src/model/ckpts/resnet34_stl10_classifier.pt
   student:
     arch: resnet18
     ckpt: src/model/ckpts/ResNet18.pt
@@ -83,7 +83,7 @@ kd:
   cache_logits: true
   cache_val_logits: true
   cache_path_template: src/model/ckpts/soft_targets/{dataset}_fp16.pt
-  cache_path: src/model/ckpts/soft_targets/cifar10_fp16.pt
-  cache_path_val: src/model/ckpts/soft_targets/cifar10_fp16_val.pt
+  cache_path: src/model/ckpts/soft_targets/stl10_fp16.pt
+  cache_path_val: src/model/ckpts/soft_targets/stl10_fp16_val.pt
 _runtime:
-  runstamp: '20250829_000051'
+  runstamp: '20250831_004532'

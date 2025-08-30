@@ -55,7 +55,7 @@ def main():
         ).to(device).eval()
 
         # paths
-        template = cfg["kd"]["cache_path"]
+        template = cfg["kd"]["cache_path_template"]
         train_path = template.format(dataset=ds_key)
         val_path = _derive_val_cache_path(train_path)
 
