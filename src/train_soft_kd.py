@@ -182,6 +182,8 @@ def maybe_build_banks(cfg, teacher, train_loader, val_loader, device):
         if not train_bank.exists():
             # teacher는 eval/stop-grad 전제
             train_bank.build(teacher, train_loader, device=device)
+            assert train_bank.meta["n"] == len(train_loader.dataset), "bank N mismatch"
+            assert train_bank.meta["c"] == cfg["model"]["num_classes"], "bank C mismatch"
 
     if use_cache_val:
         # val 경로 파생(설정에 별도 키가 있으면 우선 사용)

@@ -47,9 +47,7 @@ def load_backbone_and_classifier(backbone_path, classifier_path, name, num_class
         out_dim = cls_fc["fc.weight"].shape[0]
         if out_dim != num_classes:
             # 라벨 수가 다르면 FC 재구성 후 로드 불가 → 새로 초기화
-            in_feat = m.fc.in_features
-            m.fc = torch.nn.Linear(in_feat, num_classes)
-            # 여기서 별도 remap이 필요하면 추가 구현
+            raise ValueError(f"Teacher classifier out_dim({out_dim}) != num_classes({num_classes}). ")
         else:
             state = m.state_dict()
             state.update(cls_fc)
