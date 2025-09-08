@@ -1,0 +1,9 @@
+data:
+  dataset: "tiny_imagenet"
+model:
+  num_classes: 200
+kd:
+  enable: false
+  gamma_soft_kd: 0.0
+at:
+  enabled: true

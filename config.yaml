@@ -40,6 +40,7 @@ model:
     ckpt: "src/model/ckpts/ResNet18.pt"
 
 train:
+  grad_clip: 1.0
   linear_probe: { enable: true,  epochs: 20 }
   finetune:     { enable: true,  epochs: 80 }
   reuse_linear_head: true
@@ -72,3 +73,14 @@ kd:
   cache_logits: true         # train split에서 bank cache 사용
   cache_val_logits: true     # valid split도 bank 캐시 사용
   cache_path_template: "src/model/ckpts/soft_targets/{dataset}_fp16.pt"  # 자동 생성 경로
+
+at:
+  enabled: false
+  gamma_at: 10.0
+  p: 2
+  teacher_layers: [2,4,6,8]   # 기록/가독성용
+  student_layers: [1,2,3,4]
+  apply_in: ["finetune"]      # probe에서는 AT off
+  bank:
+    train_path: "src/model/ckpts/AT/{dataset}.pt"
+    val_path:   "src/model/ckpts/AT/{dataset}_val.pt"

@@ -1,0 +1,9 @@
+data:
+  dataset: "cifar10"
+model:
+  num_classes: 10
+kd:
+  enable: false
+  gamma_soft_kd: 0.0
+at:
+  enabled: true

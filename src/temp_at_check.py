@@ -34,7 +34,7 @@ from src.utils.config import load_config, expand_softkd_templates
 from src.data.data_setup import loaders
 from src.data.indexed import WithIndex, collate_with_index
 from src.model.load_teacher import load_backbone_and_classifier
-from src.AT_collection import ATBankReader, at_p2, _TapManager, _vectorize_map
+from src.data.AT_collection import ATBankReader, at_p2, _TapManager, _vectorize_map
 
 
 def _default_taps() -> List[str]:
