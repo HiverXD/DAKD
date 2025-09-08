@@ -516,14 +516,14 @@ def main():
             tr = train_one_epoch(
                 student, teacher, train_bank, train_loader, device, optim, kd_loss,
                 log_interval, require_bank=require_train_bank,
-                use_at=at_active("finetune"), at_bank=at_bank, at_crit=at_crit, at_p=at_p,
+                use_at=at_active("finetune"), at_bank=at_bank_train, at_crit=at_crit, at_p=at_p,
                 student_layers=tuple(at_cfg.get("student_layers",[1,2,3,4])),
                 gamma_kd=gamma_kd, grad_clip=grad_clip
             )
             va = eval_one_epoch(
                 student, teacher, val_loader, device, kd_loss,
                 bank=val_bank, require_bank=require_val_bank,
-                use_at=at_active("finetune"), at_bank=at_bank, at_crit=at_crit, at_p=at_p,
+                use_at=at_active("finetune"), at_bank=at_bank_val, at_crit=at_crit, at_p=at_p,
                 student_layers=tuple(at_cfg.get("student_layers",[1,2,3,4])),
                 gamma_kd=gamma_kd
             )

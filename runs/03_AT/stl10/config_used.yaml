@@ -1,0 +1,109 @@
+project: DAKD
+seed: 3407
+device: cuda
+precision: fp32
+experiment:
+  name: 03_AT
+output:
+  dir: runs
+paths:
+  ckpt_root: src/model/ckpts
+dataset_lst:
+  ds_keys:
+  - cifar10
+  - cifar100
+  - stl10
+  - tiny_imagenet
+  ds_num_classes:
+  - 10
+  - 100
+  - 10
+  - 200
+data:
+  root: dataset
+  dataset: stl10
+  batch_size: 128
+  num_workers: 4
+  pin_memory: true
+  download: true
+model:
+  backbone: resnet18
+  num_classes: 10
+  teacher:
+    arch: resnet34
+    ckpt: src/model/ckpts/ResNet34.pt
+    template_backbone: src/model/ckpts/resnet34_{dataset}_backbone.pt
+    template_classifier: src/model/ckpts/resnet34_{dataset}_classifier.pt
+    backbone_path: src/model/ckpts/resnet34_stl10_backbone.pt
+    classifier_path: src/model/ckpts/resnet34_stl10_classifier.pt
+  student:
+    arch: resnet18
+    ckpt: src/model/ckpts/ResNet18.pt
+train:
+  grad_clip: 1.0
+  linear_probe:
+    enable: true
+    epochs: 20
+  finetune:
+    enable: true
+    epochs: 80
+  reuse_linear_head: true
+  teacher:
+    linear_probe:
+      enable: true
+      epochs: 20
+    finetune:
+      enable: true
+      epochs: 80
+    reuse_linear_head: true
+  optimizer:
+    name: AdamW
+    lr: 0.0003
+    weight_decay: 0.05
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.0e-08
+  scheduler:
+    name: cosine
+    warmup_epochs: 5
+    min_lr: 1.0e-06
+logging:
+  log_interval: 50
+eval:
+  metrics:
+  - acc
+  - recall
+  - f1
+  - top5
+kd:
+  enable: false
+  alpha: 0.7
+  gamma_soft_kd: 0.0
+  temperature: 3.0
+  cache_logits: true
+  cache_val_logits: true
+  cache_path_template: src/model/ckpts/soft_targets/{dataset}_fp16.pt
+  cache_path: src/model/ckpts/soft_targets/stl10_fp16.pt
+  cache_path_val: src/model/ckpts/soft_targets/stl10_fp16_val.pt
+at:
+  enabled: true
+  gamma_at: 10.0
+  p: 2
+  teacher_layers:
+  - 2
+  - 4
+  - 6
+  - 8
+  student_layers:
+  - 1
+  - 2
+  - 3
+  - 4
+  apply_in:
+  - finetune
+  bank:
+    train_path: src/model/ckpts/AT/{dataset}.pt
+    val_path: src/model/ckpts/AT/{dataset}_val.pt
+_runtime:
+  runstamp: '20250908_180334'

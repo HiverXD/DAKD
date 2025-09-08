@@ -5,7 +5,9 @@ precision: "fp32"
 
 experiment:
 #  name: "01_baseline_test"
-  name: "02_soft_kd"
+#  name: "02_soft_kd"
+  name: "03_AT"
+
 
 output:
   dir: "runs"           # train.py가 runs/<experiment.name>/<dataset>로 조합
