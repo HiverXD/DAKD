@@ -1,4 +1,4 @@
-project: RDKD
+project: DAKD
 seed: 3407
 device: "cuda"
 precision: "fp32"
